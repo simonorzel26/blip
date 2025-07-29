@@ -20,6 +20,8 @@ interface RSVPSettings {
   timePerCharacter: number;
   highlightORP: boolean;
   letterSpacing: number;
+  punctuationDelay: number;
+  trailWordsCount: number;
   chunkSize: number;
   skillLevel: number;
 }
@@ -104,14 +106,81 @@ class StatePersistenceService {
 
 // RSVP calculation service
 class RSVPCalculationService {
-  static getDelay(word: string, settings: RSVPSettings): number {
-    return settings.timePerWord + (word.length * settings.timePerCharacter);
+  static getDelay(word: string, settings: RSVPSettings, currentIndex: number, allWords: string[]): number {
+    let baseDelay = settings.timePerWord + (word.length * settings.timePerCharacter);
+
+    // Smart timing adjustments
+    baseDelay += this.getPunctuationDelay(word, settings);
+    baseDelay += this.getSentenceTransitionDelay(word, currentIndex, allWords);
+    baseDelay += this.getWordLengthAdjustment(word);
+
+    return baseDelay;
+  }
+
+    private static getPunctuationDelay(word: string, settings: RSVPSettings): number {
+    const punctuationMarks = [',', ';', ':', '!', '?', '.', '...'];
+    let delay = 0;
+
+    for (const mark of punctuationMarks) {
+      if (word.includes(mark)) {
+        delay += settings.punctuationDelay;
+      }
+    }
+
+    return delay;
+  }
+
+  private static getSentenceTransitionDelay(word: string, currentIndex: number, allWords: string[]): number {
+    // Check if this word starts a new sentence
+    const isNewSentence = this.startsWithCapital(word) &&
+      (currentIndex === 0 || this.endsWithSentenceTerminator(allWords[currentIndex - 1]));
+
+    // Check if this word starts a new paragraph (double line break or significant spacing)
+    const isNewParagraph = currentIndex > 0 &&
+      allWords[currentIndex - 1].includes('\n\n');
+
+    if (isNewParagraph) {
+      return 800; // Longer pause for paragraph breaks
+    } else if (isNewSentence) {
+      return 600; // Pause for new sentences
+    }
+
+    return 0;
+  }
+
+  private static getWordLengthAdjustment(word: string): number {
+    const length = word.length;
+
+    // Short words get faster timing
+    if (length <= 3) {
+      return -100; // Faster
+    }
+    // Long words get slower timing
+    else if (length >= 8) {
+      return 200; // Slower
+    }
+
+    return 0;
+  }
+
+  private static startsWithCapital(word: string): boolean {
+    return word.length > 0 && word[0] === word[0].toUpperCase();
+  }
+
+  private static endsWithSentenceTerminator(word: string): boolean {
+    return word.endsWith('.') || word.endsWith('!') || word.endsWith('?') || word.endsWith('...');
   }
 
   static getEffectiveWPM(words: string[], settings: RSVPSettings): number {
     if (words.length === 0) return 0;
-    const avgWordLength = words.reduce((sum, word) => sum + word.length, 0) / words.length;
-    const avgTimePerWord = settings.timePerWord + (avgWordLength * settings.timePerCharacter);
+
+    // Calculate average delay including smart timing
+    let totalDelay = 0;
+    for (let i = 0; i < words.length; i++) {
+      totalDelay += this.getDelay(words[i], settings, i, words);
+    }
+
+    const avgTimePerWord = totalDelay / words.length;
     return Math.round((60 * 1000) / avgTimePerWord);
   }
 
@@ -119,12 +188,11 @@ class RSVPCalculationService {
     return Math.floor(word.length / 3);
   }
 
-  static getTrailWords(currentIndex: number, words: string[]): string[] {
-    if (currentIndex === 0) return ['', '', ''];
-    if (currentIndex === 1) return ['', '', words[0]];
-    if (currentIndex === 2) return ['', words[0], words[1]];
+  static getTrailWords(currentIndex: number, words: string[], trailWordsCount: number): string[] {
+    if (currentIndex === 0) return Array(trailWordsCount).fill('');
 
-    const startIndex = currentIndex - 3;
+    const actualCount = Math.min(currentIndex, trailWordsCount);
+    const startIndex = currentIndex - actualCount;
     const trailWords = words.slice(startIndex, currentIndex);
     return trailWords.reverse();
   }
@@ -179,7 +247,9 @@ const useSettings = () => {
     timePerWord: 50,
     timePerCharacter: 15,
     highlightORP: true,
-    letterSpacing: 0,
+    letterSpacing: 3.5,
+    punctuationDelay: 10,
+    trailWordsCount: 3,
     chunkSize: 1,
     skillLevel: 1
   });
@@ -220,7 +290,7 @@ const useReadingTimer = (state: RSVPState, settings: RSVPSettings, updateState: 
     }
 
     const currentWord = state.words[state.currentWordIndex];
-    const delay = RSVPCalculationService.getDelay(currentWord, settings);
+    const delay = RSVPCalculationService.getDelay(currentWord, settings, state.currentWordIndex, state.words);
 
     const timer = setTimeout(() => {
       updateState({ currentWordIndex: state.currentWordIndex + 1 });
@@ -324,24 +394,27 @@ const useRSVPController = () => {
 };
 
 // UI Components
-const TrailWords = ({ currentIndex, words }: { currentIndex: number; words: string[] }) => {
-  const trailWords = RSVPCalculationService.getTrailWords(currentIndex, words);
+const TrailWords = ({ currentIndex, words, trailWordsCount }: { currentIndex: number; words: string[]; trailWordsCount: number }) => {
+  const trailWords = RSVPCalculationService.getTrailWords(currentIndex, words, trailWordsCount);
 
   return (
     <div className="absolute top-32 left-0 right-0 flex flex-col items-center space-y-4 w-full">
       {trailWords.map((word, index) => {
-        const Component = index === 0 ? 'h1' : index === 1 ? 'h2' : 'h3';
+        // Calculate font size: biggest (3rem) to smallest (2rem)
+        const fontSize = 3 - (index * (1 / (trailWordsCount - 1)));
+        const opacity = 0.7 - (index * (0.4 / (trailWordsCount - 1)));
+
         return (
-          <Component
+          <div
             key={index}
             className="font-mono text-gray-400 m-0"
             style={{
-              fontSize: index === 0 ? '2.5rem' : index === 1 ? '1.75rem' : '1.25rem',
-              opacity: index === 0 ? 0.7 : index === 1 ? 0.5 : 0.3
+              fontSize: `${fontSize}rem`,
+              opacity: Math.max(opacity, 0.1)
             }}
           >
             {word}
-          </Component>
+          </div>
         );
       })}
     </div>
@@ -358,7 +431,7 @@ const CurrentWord = ({ word, highlightORP, letterSpacing = 0 }: { word: string; 
   const lettersAfterOrp = word.length - orpIndex - 1;
 
   // Calculate starting position to center the ORP letter
-  const startPosition = centerPosition - lettersBeforeOrp;
+  const startPosition = centerPosition - lettersBeforeOrp - 2;
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
@@ -430,6 +503,19 @@ const SettingsSidebar = ({
         </div>
 
         <div className="flex flex-col space-y-2">
+          <label className="text-sm text-gray-300">Punctuation delay (ms)</label>
+          <input
+            type="number"
+            min="0"
+            max="1000"
+            step="50"
+            value={settings.punctuationDelay}
+            onChange={(e) => updateSetting('punctuationDelay', Number(e.target.value))}
+            className="w-full h-8 rounded px-2 text-center text-white bg-black/30"
+          />
+        </div>
+
+        <div className="flex flex-col space-y-2">
           <label className="text-sm text-gray-300">Letter spacing (rem)</label>
           <input
             type="number"
@@ -438,6 +524,19 @@ const SettingsSidebar = ({
             step="0.1"
             value={settings.letterSpacing}
             onChange={(e) => updateSetting('letterSpacing', Number(e.target.value))}
+            className="w-full h-8 rounded px-2 text-center text-white bg-black/30"
+          />
+        </div>
+
+        <div className="flex flex-col space-y-2">
+          <label className="text-sm text-gray-300">Trail words count</label>
+          <input
+            type="number"
+            min="1"
+            max="10"
+            step="1"
+            value={settings.trailWordsCount}
+            onChange={(e) => updateSetting('trailWordsCount', Number(e.target.value))}
             className="w-full h-8 rounded px-2 text-center text-white bg-black/30"
           />
         </div>
@@ -496,7 +595,7 @@ const RSVPDisplay = ({
                 )}
               </div>
 
-              <TrailWords currentIndex={state.currentWordIndex} words={state.words} />
+              <TrailWords currentIndex={state.currentWordIndex} words={state.words} trailWordsCount={settings.trailWordsCount} />
               <CurrentWord word={state.words[state.currentWordIndex]} highlightORP={settings.highlightORP} letterSpacing={settings.letterSpacing} />
 
               {/* WPM indicator */}
