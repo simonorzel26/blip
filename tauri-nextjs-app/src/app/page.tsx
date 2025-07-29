@@ -226,12 +226,28 @@ const useSettings = () => {
 };
 
 // Keyboard event hook
-const useKeyboardEvents = (isDisplayingWords: boolean, onSpaceKey: () => void) => {
+const useKeyboardEvents = (isDisplayingWords: boolean, onSpaceKey: () => void, onFocusedShortcut: (key: string) => void) => {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.code === 'Space' && isDisplayingWords) {
-        event.preventDefault();
-        onSpaceKey();
+      if (isDisplayingWords) {
+        switch (event.code) {
+          case 'Space':
+            event.preventDefault();
+            onSpaceKey();
+            break;
+          case 'KeyJ':
+            event.preventDefault();
+            onFocusedShortcut('J');
+            break;
+          case 'KeyK':
+            event.preventDefault();
+            onFocusedShortcut('K');
+            break;
+          case 'KeyL':
+            event.preventDefault();
+            onFocusedShortcut('L');
+            break;
+        }
       }
     };
 
@@ -239,7 +255,7 @@ const useKeyboardEvents = (isDisplayingWords: boolean, onSpaceKey: () => void) =
       document.addEventListener('keydown', handleKeyPress);
       return () => document.removeEventListener('keydown', handleKeyPress);
     }
-  }, [isDisplayingWords, onSpaceKey]);
+  }, [isDisplayingWords, onSpaceKey, onFocusedShortcut]);
 };
 
 // Reading timer hook
@@ -324,6 +340,25 @@ const useRSVPController = () => {
     }
   };
 
+  const handleFocusedShortcut = (key: string) => {
+    switch (key) {
+      case 'J':
+        // Go back 10 words
+        const newIndexBack = Math.max(0, state.currentWordIndex - 10);
+        updateState({ currentWordIndex: newIndexBack });
+        break;
+      case 'K':
+        // Play/pause (same as space)
+        handleSpaceKey();
+        break;
+      case 'L':
+        // Go forward 10 words
+        const newIndexForward = Math.min(state.words.length - 1, state.currentWordIndex + 10);
+        updateState({ currentWordIndex: newIndexForward });
+        break;
+    }
+  };
+
   const displayWords = (text: string, hash: string) => {
     const { words, maxLength } = RSVPCalculationService.processText(text);
     updateState({
@@ -343,7 +378,7 @@ const useRSVPController = () => {
   };
 
   // Setup keyboard events
-  useKeyboardEvents(state.isDisplayingWords, handleSpaceKey);
+  useKeyboardEvents(state.isDisplayingWords, handleSpaceKey, handleFocusedShortcut);
 
   // Setup reading timer
   useReadingTimer(state, settings, updateState);
@@ -523,8 +558,10 @@ const SettingsSidebar = ({
         </label>
       </div>
 
-      <div className="text-sm text-gray-400">
-        Press <code className="px-2 py-1 rounded bg-white/20">Space</code> to resume reading
+      <div className="text-sm text-gray-400 space-y-1">
+        <div>Press <code className="px-2 py-1 rounded bg-white/20">Space</code> or <code className="px-2 py-1 rounded bg-white/20">K</code> to play/pause</div>
+        <div>Press <code className="px-2 py-1 rounded bg-white/20">J</code> to go back 10 words</div>
+        <div>Press <code className="px-2 py-1 rounded bg-white/20">L</code> to go forward 10 words</div>
       </div>
     </div>
   );

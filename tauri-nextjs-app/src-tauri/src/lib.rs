@@ -2,7 +2,7 @@ use tauri::Manager;
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri::Emitter;
 use std::sync::Mutex;
-use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
 
 #[cfg(target_os = "macos")]
 use core_graphics::event::{CGEvent, CGEventFlags};
@@ -85,7 +85,7 @@ async fn hide_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppSta
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(
+                .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                                 .with_handler(move |app, _shortcut, event| {
                     if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
@@ -141,7 +141,7 @@ pub fn run() {
                 window.set_position(monitor.position().clone()).unwrap();
             }
 
-            app.global_shortcut().register("Option+C").unwrap();
+                        app.global_shortcut().register("Option+C").unwrap();
 
             window.set_always_on_top(true).unwrap();
 
