@@ -111,14 +111,13 @@ class RSVPCalculationService {
 
     // Smart timing adjustments
     baseDelay += this.getPunctuationDelay(word, settings);
-    baseDelay += this.getSentenceTransitionDelay(word, currentIndex, allWords);
-    baseDelay += this.getWordLengthAdjustment(word);
+    baseDelay += this.getWordLengthAdjustment(word, settings);
 
     return baseDelay;
   }
 
-    private static getPunctuationDelay(word: string, settings: RSVPSettings): number {
-    const punctuationMarks = [',', ';', ':', '!', '?', '.', '...'];
+      private static getPunctuationDelay(word: string, settings: RSVPSettings): number {
+    const punctuationMarks = [',', ';', ':', '!', '?', '.', '...', '\n\n'];
     let delay = 0;
 
     for (const mark of punctuationMarks) {
@@ -130,46 +129,11 @@ class RSVPCalculationService {
     return delay;
   }
 
-  private static getSentenceTransitionDelay(word: string, currentIndex: number, allWords: string[]): number {
-    // Check if this word starts a new sentence
-    const isNewSentence = this.startsWithCapital(word) &&
-      (currentIndex === 0 || this.endsWithSentenceTerminator(allWords[currentIndex - 1]));
-
-    // Check if this word starts a new paragraph (double line break or significant spacing)
-    const isNewParagraph = currentIndex > 0 &&
-      allWords[currentIndex - 1].includes('\n\n');
-
-    if (isNewParagraph) {
-      return 800; // Longer pause for paragraph breaks
-    } else if (isNewSentence) {
-      return 600; // Pause for new sentences
-    }
-
-    return 0;
+  private static getWordLengthAdjustment(word: string, settings: RSVPSettings): number {
+    return settings.timePerWord + (word.length * settings.timePerCharacter);
   }
 
-  private static getWordLengthAdjustment(word: string): number {
-    const length = word.length;
 
-    // Short words get faster timing
-    if (length <= 3) {
-      return -100; // Faster
-    }
-    // Long words get slower timing
-    else if (length >= 8) {
-      return 200; // Slower
-    }
-
-    return 0;
-  }
-
-  private static startsWithCapital(word: string): boolean {
-    return word.length > 0 && word[0] === word[0].toUpperCase();
-  }
-
-  private static endsWithSentenceTerminator(word: string): boolean {
-    return word.endsWith('.') || word.endsWith('!') || word.endsWith('?') || word.endsWith('...');
-  }
 
   static getEffectiveWPM(words: string[], settings: RSVPSettings): number {
     if (words.length === 0) return 0;
