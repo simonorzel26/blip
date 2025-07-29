@@ -2,10 +2,41 @@ use tauri::Manager;
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri::Emitter;
 use std::sync::Mutex;
+use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+#[cfg(target_os = "macos")]
+use core_graphics::event::{CGEvent, CGEventFlags};
+#[cfg(target_os = "macos")]
+use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 
 #[derive(Default)]
 struct AppState {
     is_visible: bool,
+}
+
+#[cfg(target_os = "macos")]
+fn simulate_cmd_c() {
+    println!("Attempting to simulate Cmd+C using Core Graphics");
+
+    let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState).unwrap();
+    let c_keycode = 8u16; // Key code for 'c'
+
+    // Create key down event with Command modifier
+    if let Ok(key_down_event) = CGEvent::new_keyboard_event(source.clone(), c_keycode, true) {
+        key_down_event.set_flags(CGEventFlags::CGEventFlagCommand);
+        key_down_event.post(core_graphics::event::CGEventTapLocation::HID);
+    }
+
+    // Small delay
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    // Create key up event with Command modifier
+    if let Ok(key_up_event) = CGEvent::new_keyboard_event(source, c_keycode, false) {
+        key_up_event.set_flags(CGEventFlags::CGEventFlagCommand);
+        key_up_event.post(core_graphics::event::CGEventTapLocation::HID);
+    }
+
+    println!("Cmd+C simulation completed");
 }
 
 #[tauri::command]
@@ -69,6 +100,14 @@ pub fn run() {
                             app_state.is_visible = false;
                             app_handle.emit("window-toggled", serde_json::json!({ "isVisible": false })).unwrap();
                         } else {
+                            // First, copy any selected text to clipboard
+                            #[cfg(target_os = "macos")]
+                            simulate_cmd_c();
+
+                            // Delay to ensure copy operation completes
+                            std::thread::sleep(std::time::Duration::from_millis(200));
+
+                            // Then show the app
                             app_handle.show().unwrap();
                             window.show().unwrap();
                             window.set_focus().unwrap();
@@ -84,19 +123,26 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![toggle_window, show_window, hide_window])
         .setup(|app| {
             #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Regular);
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             let window = app.get_webview_window("main").unwrap();
+
+            // #[cfg(target_os = "macos")]
+            // apply_vibrancy(
+            //     &window,
+            //     NSVisualEffectMaterial::HudWindow,
+            //     None,
+            //     Some(1.0),
+            // )
+            // .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
             if let Ok(Some(monitor)) = app.primary_monitor() {
                 window.set_size(monitor.size().clone()).unwrap();
                 window.set_position(monitor.position().clone()).unwrap();
             }
 
-            // Register the global shortcut for Option+C only
             app.global_shortcut().register("Option+C").unwrap();
 
-            // Ensure window is always on top when visible
             window.set_always_on_top(true).unwrap();
 
             Ok(())

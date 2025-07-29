@@ -19,9 +19,12 @@
         "resizable": true,
         "fullscreen": false,
         "visible": false,
-        "alwaysOnTop": true
+        "transparent": true,
+        "decorations": false,
+        "skipTaskbar": true
       }
     ],
+    "macOSPrivateApi": true,
     "security": {
       "csp": null
     }
