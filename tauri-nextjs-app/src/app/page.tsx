@@ -19,6 +19,7 @@ interface RSVPSettings {
   timePerWord: number;
   timePerCharacter: number;
   highlightORP: boolean;
+  letterSpacing: number;
   chunkSize: number;
   skillLevel: number;
 }
@@ -178,6 +179,7 @@ const useSettings = () => {
     timePerWord: 50,
     timePerCharacter: 15,
     highlightORP: true,
+    letterSpacing: 0,
     chunkSize: 1,
     skillLevel: 1
   });
@@ -346,20 +348,40 @@ const TrailWords = ({ currentIndex, words }: { currentIndex: number; words: stri
   );
 };
 
-const CurrentWord = ({ word, highlightORP }: { word: string; highlightORP: boolean }) => {
+const CurrentWord = ({ word, highlightORP, letterSpacing = 0 }: { word: string; highlightORP: boolean; letterSpacing?: number }) => {
   const orpIndex = RSVPCalculationService.getORPIndex(word);
+  const maxLetters = 20; // Fixed grid size
+  const centerPosition = Math.floor(maxLetters / 2) - 2; // Center position offset left (8)
+
+  // Calculate how many letters to show before and after the ORP
+  const lettersBeforeOrp = orpIndex;
+  const lettersAfterOrp = word.length - orpIndex - 1;
+
+  // Calculate starting position to center the ORP letter
+  const startPosition = centerPosition - lettersBeforeOrp;
 
   return (
-    <div className="absolute inset-0 flex items-center">
-      <div className="font-mono text-left">
-        {word.split('').map((char, charIndex) => (
-          <span
-            key={charIndex}
-            className={highlightORP && charIndex === orpIndex ? 'text-red-500' : ''}
-          >
-            {char}
-          </span>
-        ))}
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="font-mono relative">
+        {/* Fixed grid with 20 positions and adjustable spacing */}
+        <div
+          className="grid grid-cols-20 w-full max-w-4xl"
+          style={{ gap: `${letterSpacing}rem` }}
+        >
+          {Array.from({ length: maxLetters }, (_, gridIndex) => {
+            const wordIndex = gridIndex - startPosition;
+            const char = wordIndex >= 0 && wordIndex < word.length ? word[wordIndex] : '';
+            const isOrpLetter = wordIndex === orpIndex;
+
+            return (
+              <div key={gridIndex} className="flex items-center justify-center">
+                <span className={highlightORP && isOrpLetter ? 'text-red-500' : ''}>
+                  {char}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -403,6 +425,19 @@ const SettingsSidebar = ({
             step="5"
             value={settings.timePerCharacter}
             onChange={(e) => updateSetting('timePerCharacter', Number(e.target.value))}
+            className="w-full h-8 rounded px-2 text-center text-white bg-black/30"
+          />
+        </div>
+
+        <div className="flex flex-col space-y-2">
+          <label className="text-sm text-gray-300">Letter spacing (rem)</label>
+          <input
+            type="number"
+            min="0"
+            max="2"
+            step="0.1"
+            value={settings.letterSpacing}
+            onChange={(e) => updateSetting('letterSpacing', Number(e.target.value))}
             className="w-full h-8 rounded px-2 text-center text-white bg-black/30"
           />
         </div>
@@ -462,7 +497,7 @@ const RSVPDisplay = ({
               </div>
 
               <TrailWords currentIndex={state.currentWordIndex} words={state.words} />
-              <CurrentWord word={state.words[state.currentWordIndex]} highlightORP={settings.highlightORP} />
+              <CurrentWord word={state.words[state.currentWordIndex]} highlightORP={settings.highlightORP} letterSpacing={settings.letterSpacing} />
 
               {/* WPM indicator */}
               <div className="absolute bottom-2 right-2 text-sm opacity-50">
