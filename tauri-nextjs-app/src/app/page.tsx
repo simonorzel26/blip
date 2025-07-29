@@ -412,7 +412,7 @@ const CurrentWord = ({ word, highlightORP, letterSpacing = 0 }: { word: string; 
 
             return (
               <div key={gridIndex} className="flex items-center justify-center">
-                <span className={highlightORP && isOrpLetter ? 'text-red-500' : ''}>
+                <span className={highlightORP && isOrpLetter ? 'text-red-400' : 'text-white/70'}>
                   {char}
                 </span>
               </div>
