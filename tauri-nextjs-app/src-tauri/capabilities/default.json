@@ -11,6 +11,21 @@
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-is-registered",
     "clipboard-manager:allow-read-text",
-    "clipboard-manager:allow-write-text"
-  ]
+    "clipboard-manager:allow-write-text",
+    "dialog:allow-open",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:scope"
+  ],
+  "fs": {
+    "scope": [
+      "$DOCUMENT/*",
+      "$DESKTOP/*",
+      "$DOWNLOAD/*",
+      "$HOME/*",
+      "$PICTURE/*",
+      "$VIDEO/*",
+      "$MUSIC/*"
+    ]
+  }
 }

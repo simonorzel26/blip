@@ -21,7 +21,10 @@
         "visible": false,
         "transparent": true,
         "decorations": false,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "alwaysOnTop": false,
+        "center": true,
+        "closable": true
       }
     ],
     "macOSPrivateApi": true,

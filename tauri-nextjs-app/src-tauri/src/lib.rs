@@ -2,7 +2,8 @@ use tauri::Manager;
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri::Emitter;
 use std::sync::Mutex;
-
+use std::net::TcpStream;
+use std::time::Duration;
 
 #[cfg(target_os = "macos")]
 use core_graphics::event::{CGEvent, CGEventFlags};
@@ -85,9 +86,11 @@ async fn hide_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppSta
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
-                .plugin(
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                                .with_handler(move |app, _shortcut, event| {
+                .with_handler(move |app, _shortcut, event| {
                     if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
                         let app_handle = app.app_handle().clone();
                         let state = app_handle.state::<Mutex<AppState>>();
@@ -126,22 +129,32 @@ pub fn run() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             let window = app.get_webview_window("main").unwrap();
+            let app_handle = app.app_handle().clone();
 
-            // #[cfg(target_os = "macos")]
-            // apply_vibrancy(
-            //     &window,
-            //     NSVisualEffectMaterial::HudWindow,
-            //     None,
-            //     Some(1.0),
-            // )
-            // .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            // Development server health check
+            #[cfg(debug_assertions)]
+            {
+                let app_handle_clone = app_handle.clone();
+                std::thread::spawn(move || {
+                    loop {
+                        std::thread::sleep(Duration::from_secs(5));
+
+                        // Check if development server is still running using TCP connection
+                        if TcpStream::connect("localhost:3000").is_err() {
+                            println!("Development server stopped, closing app");
+                            app_handle_clone.exit(0);
+                            break;
+                        }
+                    }
+                });
+            }
 
             if let Ok(Some(monitor)) = app.primary_monitor() {
                 window.set_size(monitor.size().clone()).unwrap();
                 window.set_position(monitor.position().clone()).unwrap();
             }
 
-                        app.global_shortcut().register("Option+C").unwrap();
+            app.global_shortcut().register("Option+C").unwrap();
 
             window.set_always_on_top(true).unwrap();
 
