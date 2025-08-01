@@ -1,7 +1,8 @@
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { RSVPState, RSVPSettings } from "./types";
 
-export const hashString = (str: string) => {
+// Single Responsibility: String hashing
+export const hashString = (str: string): string => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -11,6 +12,7 @@ export const hashString = (str: string) => {
   return hash.toString();
 };
 
+// Single Responsibility: Clipboard operations
 export class ClipboardService {
   static async readContent(): Promise<string | null> {
     try {
@@ -23,6 +25,7 @@ export class ClipboardService {
   }
 }
 
+// Single Responsibility: State persistence
 export class StatePersistenceService {
   private static readonly STORAGE_KEY = 'rsvp-state';
 
@@ -72,54 +75,120 @@ export class StatePersistenceService {
   }
 }
 
-export class FileProcessingService {
+// Single Responsibility: File system operations
+export class FileSystemService {
+  static async readTextFile(filePath: string): Promise<string> {
+    const { readTextFile } = await import('@tauri-apps/plugin-fs');
+    return await readTextFile(filePath);
+  }
+
   static getFileMetadata(content: string): { totalWords: number; estimatedPages: number } {
     const wordArray = content.split(/\s+/).filter(word => word.length > 0);
     const totalWords = wordArray.length;
-    const estimatedPages = Math.ceil(totalWords / 250); // ~250 words per page
+    const estimatedPages = Math.ceil(totalWords / 250);
 
     return { totalWords, estimatedPages };
   }
+}
 
-  static processTextInChunks(text: string, startIndex: number = 0, chunkSize: number = 1000): {
-    words: string[];
-    maxLength: number;
-    hasMore: boolean;
-    totalWords: number;
-  } {
-    const wordArray = text.split(/\s+/).filter(word => word.length > 0);
-    const totalWords = wordArray.length;
+// Single Responsibility: File-based word reading
+export class FileBasedReader {
+  private filePath: string | null = null;
+  private totalWords: number = 0;
+  private wordCache: Map<number, string> = new Map();
+  private readonly cacheSize = 1000;
 
-    // Get chunk of words
-    const endIndex = Math.min(startIndex + chunkSize, totalWords);
-    const chunkWords = wordArray.slice(startIndex, endIndex);
+  async loadFile(filePath: string): Promise<{ totalWords: number; estimatedPages: number }> {
+    try {
+      const content = await FileSystemService.readTextFile(filePath);
+      const { totalWords, estimatedPages } = FileSystemService.getFileMetadata(content);
 
-    // Process chunk
-    const truncatedWords = chunkWords.map(word => word.length > 20 ? word.substring(0, 20) : word);
-    const maxLength = Math.max(...truncatedWords.map(word => word.length));
+      this.totalWords = totalWords;
+      this.filePath = filePath;
 
-    return {
-      words: truncatedWords,
-      maxLength,
-      hasMore: endIndex < totalWords,
-      totalWords
-    };
+      await this.cacheWords(0, Math.min(this.cacheSize, this.totalWords));
+
+      return { totalWords: this.totalWords, estimatedPages };
+    } catch (error) {
+      console.error('Failed to load file:', error);
+      throw error;
+    }
   }
 
-  static getWordAtPosition(text: string, position: number): string | null {
-    const wordArray = text.split(/\s+/).filter(word => word.length > 0);
-    return wordArray[position] || null;
+  async getWords(startIndex: number, count: number): Promise<string[]> {
+    if (!this.filePath) {
+      throw new Error('No file loaded');
+    }
+
+    const endIndex = Math.min(startIndex + count, this.totalWords);
+    const words: string[] = [];
+
+    const batchStart = Math.floor(startIndex / this.cacheSize) * this.cacheSize;
+    await this.cacheWords(batchStart, Math.min(this.cacheSize, this.totalWords - batchStart));
+
+    for (let i = startIndex; i < endIndex; i++) {
+      const word = await this.getWordAt(i);
+      if (word) {
+        words.push(word);
+      }
+    }
+
+    return words;
+  }
+
+  async getWordAt(index: number): Promise<string | null> {
+    if (!this.filePath || index >= this.totalWords) {
+      return null;
+    }
+
+    if (this.wordCache.has(index)) {
+      return this.wordCache.get(index) || null;
+    }
+
+    const batchStart = Math.floor(index / this.cacheSize) * this.cacheSize;
+    await this.cacheWords(batchStart, Math.min(this.cacheSize, this.totalWords - batchStart));
+
+    return this.wordCache.get(index) || null;
+  }
+
+  private async cacheWords(startIndex: number, count: number): Promise<void> {
+    if (!this.filePath) return;
+
+    try {
+      const content = await FileSystemService.readTextFile(this.filePath);
+      const wordArray = content.split(/\s+/).filter(word => word.length > 0);
+
+      if (this.wordCache.size > this.cacheSize * 2) {
+        this.wordCache.clear();
+      }
+
+      for (let i = 0; i < count; i++) {
+        const globalIndex = startIndex + i;
+        if (globalIndex < wordArray.length) {
+          const word = wordArray[globalIndex];
+          this.wordCache.set(globalIndex, word.length > 20 ? word.substring(0, 20) : word);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to cache words:', error);
+    }
+  }
+
+  getTotalWords(): number {
+    return this.totalWords;
+  }
+
+  clearCache(): void {
+    this.wordCache.clear();
   }
 }
 
+// Single Responsibility: RSVP calculations
 export class RSVPCalculationService {
   static getDelay(word: string, settings: RSVPSettings, currentIndex: number, allWords: string[]): number {
     let baseDelay = settings.timePerWord + (word.length * settings.timePerCharacter);
-
-    // Smart timing adjustments
     baseDelay += this.getPunctuationDelay(word, settings);
     baseDelay += this.getWordLengthAdjustment(word, settings);
-
     return baseDelay;
   }
 
@@ -143,10 +212,8 @@ export class RSVPCalculationService {
   static getEffectiveWPM(words: string[], settings: RSVPSettings, globalWordIndex?: number): number {
     if (words.length === 0) return 0;
 
-    // Limit to first 500 words to prevent stack overflow with large files
     const wordsToProcess = words.slice(0, 500);
 
-    // Calculate average delay including smart timing
     let totalDelay = 0;
     for (let i = 0; i < wordsToProcess.length; i++) {
       totalDelay += this.getDelay(wordsToProcess[i], settings, i, wordsToProcess);
@@ -171,123 +238,10 @@ export class RSVPCalculationService {
 
   static processText(text: string): { words: string[]; maxLength: number } {
     const wordArray = text.split(/\s+/).filter(word => word.length > 0);
+    const limitedWords = wordArray.slice(0, 50000);
 
-    // Process in batches to prevent stack overflow
-    const batchSize = 10000;
-    const maxWords = 50000; // Conservative limit
-    const limitedWords = wordArray.slice(0, maxWords);
-
-    // Process words in batches
-    const truncatedWords: string[] = [];
-    for (let i = 0; i < limitedWords.length; i += batchSize) {
-      const batch = limitedWords.slice(i, i + batchSize);
-      const processedBatch = batch.map(word => word.length > 20 ? word.substring(0, 20) : word);
-      truncatedWords.push(...processedBatch);
-    }
-
+    const truncatedWords = limitedWords.map(word => word.length > 20 ? word.substring(0, 20) : word);
     const maxLength = Math.max(...truncatedWords.map(word => word.length));
     return { words: truncatedWords, maxLength };
-  }
-}
-
-export class FileBasedReader {
-  private filePath: string | null = null;
-  private totalWords: number = 0;
-  private wordCache: Map<number, string> = new Map();
-  private readonly cacheSize = 1000; // Cache 1000 words at a time
-
-  async loadFile(filePath: string): Promise<{ totalWords: number; estimatedPages: number }> {
-    try {
-      const { readTextFile } = await import('@tauri-apps/plugin-fs');
-      const content = await readTextFile(filePath);
-
-      // Get total word count
-      const wordArray = content.split(/\s+/).filter(word => word.length > 0);
-      this.totalWords = wordArray.length;
-      this.filePath = filePath;
-
-      // Cache first batch of words
-      await this.cacheWords(0, Math.min(this.cacheSize, this.totalWords));
-
-      const estimatedPages = Math.ceil(this.totalWords / 250);
-      return { totalWords: this.totalWords, estimatedPages };
-    } catch (error) {
-      console.error('Failed to load file:', error);
-      throw error;
-    }
-  }
-
-  async getWords(startIndex: number, count: number): Promise<string[]> {
-    if (!this.filePath) {
-      throw new Error('No file loaded');
-    }
-
-    const endIndex = Math.min(startIndex + count, this.totalWords);
-    const words: string[] = [];
-
-    // Load the batch containing the start index
-    const batchStart = Math.floor(startIndex / this.cacheSize) * this.cacheSize;
-    await this.cacheWords(batchStart, Math.min(this.cacheSize, this.totalWords - batchStart));
-
-    // Get words from the requested range
-    for (let i = startIndex; i < endIndex; i++) {
-      const word = await this.getWordAt(i);
-      if (word) {
-        words.push(word);
-      }
-    }
-
-    return words;
-  }
-
-  async getWordAt(index: number): Promise<string | null> {
-    if (!this.filePath || index >= this.totalWords) {
-      return null;
-    }
-
-    // Check cache first
-    if (this.wordCache.has(index)) {
-      return this.wordCache.get(index) || null;
-    }
-
-    // Load the batch containing this word
-    const batchStart = Math.floor(index / this.cacheSize) * this.cacheSize;
-    await this.cacheWords(batchStart, Math.min(this.cacheSize, this.totalWords - batchStart));
-
-    return this.wordCache.get(index) || null;
-  }
-
-  private async cacheWords(startIndex: number, count: number): Promise<void> {
-    if (!this.filePath) return;
-
-    try {
-      const { readTextFile } = await import('@tauri-apps/plugin-fs');
-      const content = await readTextFile(this.filePath);
-      const wordArray = content.split(/\s+/).filter(word => word.length > 0);
-
-      // Clear old cache entries to prevent memory bloat
-      if (this.wordCache.size > this.cacheSize * 2) {
-        this.wordCache.clear();
-      }
-
-      // Cache the requested words
-      for (let i = 0; i < count; i++) {
-        const globalIndex = startIndex + i;
-        if (globalIndex < wordArray.length) {
-          const word = wordArray[globalIndex];
-          this.wordCache.set(globalIndex, word.length > 20 ? word.substring(0, 20) : word);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to cache words:', error);
-    }
-  }
-
-  getTotalWords(): number {
-    return this.totalWords;
-  }
-
-  clearCache(): void {
-    this.wordCache.clear();
   }
 }

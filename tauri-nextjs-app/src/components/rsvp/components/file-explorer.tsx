@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { FolderOpen, FileText, X } from "lucide-react";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { hashString, FileProcessingService } from "../services";
+import { hashString, FileSystemService } from "../services";
 
 interface FileProject {
   id: string;
@@ -22,34 +22,34 @@ interface FileProject {
   estimatedPages: number;
 }
 
-export const FileExplorer = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [projects, setProjects] = useState<FileProject[]>([]);
-
-  // Load projects from localStorage
-  const loadProjects = useCallback(() => {
+// Single Responsibility: Project management
+class ProjectManager {
+  static loadProjects(): FileProject[] {
     try {
       const saved = localStorage.getItem('file-projects');
-      if (saved) {
-        setProjects(JSON.parse(saved));
-      }
+      return saved ? JSON.parse(saved) : [];
     } catch (error) {
       console.error('Failed to load projects:', error);
+      return [];
     }
-  }, []);
+  }
 
-  // Save projects to localStorage
-  const saveProjects = useCallback((projectsList: FileProject[]) => {
+  static saveProjects(projects: FileProject[]): void {
     try {
-      localStorage.setItem('file-projects', JSON.stringify(projectsList));
-      setProjects(projectsList);
+      localStorage.setItem('file-projects', JSON.stringify(projects));
     } catch (error) {
       console.error('Failed to save projects:', error);
     }
-  }, []);
+  }
 
-  // Open file handler
-  const handleOpenFile = useCallback(async () => {
+  static deleteProject(projectId: string, projects: FileProject[]): FileProject[] {
+    return projects.filter(p => p.id !== projectId);
+  }
+}
+
+// Single Responsibility: File operations
+class FileOperations {
+  static async openFile(): Promise<{ selected: string | null; error?: string }> {
     try {
       const selected = await open({
         multiple: false,
@@ -59,81 +59,47 @@ export const FileExplorer = () => {
         }]
       });
 
-      if (selected && typeof selected === 'string') {
-        const content = await readTextFile(selected);
-        const fileName = selected.split('/').pop()?.split('.')[0] || 'Untitled';
-        const projectId = hashString(content + Date.now()).toString();
-
-        // Get file metadata first (no stack overflow)
-        const { totalWords, estimatedPages } = FileProcessingService.getFileMetadata(content);
-
-        const newProject: FileProject = {
-          id: projectId,
-          name: fileName,
-          filePath: selected,
-          wordCount: totalWords,
-          lastRead: 0,
-          createdAt: new Date().toISOString(),
-          chunkSize: totalWords, // Store entire file as one chunk
-          totalChunks: 1,
-          estimatedPages
-        };
-
-        // Save project metadata only
-        const updatedProjects = [newProject, ...projects];
-        saveProjects(updatedProjects);
-
-        // Store project info in localStorage
-        localStorage.setItem('current-project-id', projectId);
-        localStorage.setItem('current-project-chunk', '0');
-        localStorage.setItem('current-project-file-path', selected);
-        localStorage.setItem('current-project-total-chunks', '1');
-        localStorage.setItem('current-project-total-words', totalWords.toString());
-        localStorage.setItem('current-project-chunk-size', totalWords.toString());
-
-        // Close the explorer
-        setIsOpen(false);
-
-        // Trigger event with file metadata (content will be loaded on-demand)
-        window.dispatchEvent(new CustomEvent('file-loaded', {
-          detail: {
-            filePath: selected,
-            id: projectId,
-            chunkIndex: 0,
-            totalChunks: 1,
-            wordCount: totalWords,
-            estimatedPages
-          }
-        }));
-      }
+      return { selected: selected && typeof selected === 'string' ? selected : null };
     } catch (error) {
       console.error('Failed to open file:', error);
+      return { selected: null, error: 'Failed to open file' };
     }
-  }, [projects, saveProjects]);
+  }
 
-  // Load project handler
-  const handleLoadProject = useCallback(async (project: FileProject) => {
+  static async readFileContent(filePath: string): Promise<{ content: string; error?: string }> {
     try {
-      // Trigger event to load project with progress
-      window.dispatchEvent(new CustomEvent('load-project-with-progress', {
-        detail: { project }
-      }));
-
-      // Close the explorer
-      setIsOpen(false);
+      const content = await readTextFile(filePath);
+      return { content };
     } catch (error) {
-      console.error('Failed to load project:', error);
+      console.error('Failed to read file:', error);
+      return { content: '', error: 'Failed to read file' };
     }
-  }, []);
+  }
+}
 
-  // Delete project handler
-  const handleDeleteProject = useCallback((projectId: string) => {
-    const updatedProjects = projects.filter(p => p.id !== projectId);
-    saveProjects(updatedProjects);
-  }, [projects, saveProjects]);
+// Single Responsibility: Project creation
+class ProjectCreator {
+  static createProject(filePath: string, fileName: string, content: string): FileProject {
+    const projectId = hashString(content + Date.now()).toString();
+    const { totalWords, estimatedPages } = FileSystemService.getFileMetadata(content);
 
-  // Format date
-  const formatDate = useCallback((dateString: string) => {
+    return {
+      id: projectId,
+      name: fileName,
+      filePath,
+      wordCount: totalWords,
+      lastRead: 0,
+      createdAt: new Date().toISOString(),
+      chunkSize: totalWords,
+      totalChunks: 1,
+      estimatedPages
+    };
+  }
+}
+
+// Single Responsibility: UI utilities
+class UIUtils {
+  static formatDate(dateString: string): string {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -141,15 +107,9 @@ export const FileExplorer = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
-  }, []);
+  }
 
-  // Get progress percentage
-  const getProgressPercentage = useCallback((project: FileProject) => {
-    return Math.round((project.lastRead / project.wordCount) * 100);
-  }, []);
-
-  // Format word count
-  const formatWordCount = useCallback((wordCount: number) => {
+  static formatWordCount(wordCount: number): string {
     if (wordCount >= 1000000) {
       return `${(wordCount / 1000000).toFixed(1)}M words`;
     } else if (wordCount >= 1000) {
@@ -157,16 +117,116 @@ export const FileExplorer = () => {
     } else {
       return `${wordCount} words`;
     }
-  }, []);
+  }
 
-  // Format progress text
-  const getProgressText = useCallback((project: FileProject) => {
-    const percentage = getProgressPercentage(project);
+  static getProgressPercentage(project: FileProject): number {
+    return Math.round((project.lastRead / project.wordCount) * 100);
+  }
+
+  static getProgressText(project: FileProject): string {
+    const percentage = this.getProgressPercentage(project);
     const wordsRead = project.lastRead || 0;
     const totalWords = project.wordCount;
 
     return `${wordsRead.toLocaleString()} / ${totalWords.toLocaleString()} words (${percentage}%)`;
-  }, [getProgressPercentage]);
+  }
+}
+
+export const FileExplorer = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [projects, setProjects] = useState<FileProject[]>([]);
+
+  const loadProjects = useCallback(() => {
+    const loadedProjects = ProjectManager.loadProjects();
+    setProjects(loadedProjects);
+  }, []);
+
+  const saveProjects = useCallback((projectsList: FileProject[]) => {
+    ProjectManager.saveProjects(projectsList);
+    setProjects(projectsList);
+  }, []);
+
+  // Listen for progress updates
+  useEffect(() => {
+    const handleProjectProgressUpdated = (event: CustomEvent) => {
+      const { projectId, currentWordIndex, updatedProject } = event.detail;
+
+      setProjects(prevProjects =>
+        prevProjects.map(project =>
+          project.id === projectId
+            ? { ...project, lastRead: currentWordIndex, lastReadDate: updatedProject.lastReadDate }
+            : project
+        )
+      );
+    };
+
+    window.addEventListener('project-progress-updated', handleProjectProgressUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('project-progress-updated', handleProjectProgressUpdated as EventListener);
+    };
+  }, []);
+
+  const handleOpenFile = useCallback(async () => {
+    const { selected, error } = await FileOperations.openFile();
+
+    if (error || !selected) {
+      console.error('Failed to open file:', error);
+      return;
+    }
+
+    const { content, error: readError } = await FileOperations.readFileContent(selected);
+
+    if (readError || !content) {
+      console.error('Failed to read file:', readError);
+      return;
+    }
+
+    const fileName = selected.split('/').pop()?.split('.')[0] || 'Untitled';
+    const newProject = ProjectCreator.createProject(selected, fileName, content);
+
+    const updatedProjects = [newProject, ...projects];
+    saveProjects(updatedProjects);
+
+    // Store project info in localStorage
+    localStorage.setItem('current-project-id', newProject.id);
+    localStorage.setItem('current-project-chunk', '0');
+    localStorage.setItem('current-project-file-path', selected);
+    localStorage.setItem('current-project-total-chunks', '1');
+    localStorage.setItem('current-project-total-words', newProject.wordCount.toString());
+    localStorage.setItem('current-project-chunk-size', newProject.wordCount.toString());
+
+    setIsOpen(false);
+
+    // Trigger event with file metadata
+    window.dispatchEvent(new CustomEvent('file-loaded', {
+      detail: {
+        filePath: selected,
+        id: newProject.id,
+        chunkIndex: 0,
+        totalChunks: 1,
+        wordCount: newProject.wordCount,
+        estimatedPages: newProject.estimatedPages
+      }
+    }));
+  }, [projects, saveProjects]);
+
+  const handleLoadProject = useCallback(async (project: FileProject) => {
+    try {
+      window.dispatchEvent(new CustomEvent('load-project-with-progress', {
+        detail: { project }
+      }));
+
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Failed to load project:', error);
+    }
+  }, []);
+
+  const handleDeleteProject = useCallback((projectId: string) => {
+    const updatedProjects = ProjectManager.deleteProject(projectId, projects);
+    saveProjects(updatedProjects);
+  }, [projects, saveProjects]);
 
   // Collapsed view
   if (!isOpen) {
@@ -271,12 +331,12 @@ export const FileExplorer = () => {
                     <div className="w-full bg-white/10 rounded-full h-1.5 mb-2">
                       <div
                         className="bg-white/30 h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${getProgressPercentage(project)}%` }}
+                        style={{ width: `${UIUtils.getProgressPercentage(project)}%` }}
                       />
                     </div>
                     <div className="flex items-center justify-between text-xs text-white/50">
-                      <span>{getProgressText(project)}</span>
-                      <span>{formatDate(project.createdAt)}</span>
+                      <span>{UIUtils.getProgressText(project)}</span>
+                      <span>{UIUtils.formatDate(project.createdAt)}</span>
                     </div>
                   </CardContent>
                 </Card>
