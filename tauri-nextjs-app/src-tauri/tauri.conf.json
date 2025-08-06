@@ -1,18 +1,18 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "tauri-nextjs-app",
+  "productName": "Blip RSVP Reader",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.blip.rsvp-reader",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "bun build"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
-        "title": "tauri-nextjs-app",
+        "title": "Blip RSVP Reader",
         "label": "main",
         "width": 800,
         "height": 600,

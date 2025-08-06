@@ -15,7 +15,9 @@
     "dialog:allow-open",
     "fs:allow-read-file",
     "fs:allow-read-text-file",
-    "fs:scope"
+    "fs:scope",
+    "store:default",
+    "fs:default"
   ],
   "fs": {
     "scope": [

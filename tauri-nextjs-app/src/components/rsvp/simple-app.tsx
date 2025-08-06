@@ -1,0 +1,35 @@
+'use client';
+
+import { useState } from 'react';
+import { RSVPProvider, useRSVP } from './new-context';
+import { FileManager } from './components/file-manager';
+import { SimpleRSVPDisplay } from './components/simple-rsvp-display';
+import { SimpleSettings } from './components/simple-settings';
+import { FileMetadata } from '@/lib/tauri-file-api';
+
+function AppContent() {
+  const { loadProject, state } = useRSVP();
+
+  const handleProjectSelected = async (project: FileMetadata, wordIndex: number) => {
+    await loadProject(project, wordIndex);
+  };
+
+    return (
+    <div className="h-screen flex bg-black mt-8">
+      <FileManager
+        onProjectSelected={handleProjectSelected}
+        currentProjectId={state.currentProject?.id}
+      />
+      <SimpleRSVPDisplay />
+      <SimpleSettings />
+    </div>
+  );
+}
+
+export function SimpleApp() {
+  return (
+    <RSVPProvider>
+      <AppContent />
+    </RSVPProvider>
+  );
+}

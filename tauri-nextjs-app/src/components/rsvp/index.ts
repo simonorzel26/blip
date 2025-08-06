@@ -1,7 +1,5 @@
-export { RSVPProvider, useRSVP } from "./context";
-export { RSVPDisplay } from "./components/rsvp-display";
-export { WelcomeScreen } from "./components/welcome-screen";
-export { SettingsSidebar } from "./components/settings-sidebar";
-export { TrailWords } from "./components/trail-words";
-export { CurrentWord } from "./components/current-word";
-export type { RSVPState, RSVPSettings, RSVPContextValue } from "./types";
+export { RSVPProvider, useRSVP } from "./new-context";
+export { SimpleApp } from "./simple-app";
+export { FileManager } from "./components/file-manager";
+export { SimpleRSVPDisplay } from "./components/simple-rsvp-display";
+export { SimpleSettings } from "./components/simple-settings";
