@@ -37,6 +37,7 @@ struct ProjectSettings {
     trail_words_count: i32,
     chunk_size: i32,
     skill_level: i32,
+    normalize_text: bool,
 }
 
 impl Default for ProjectSettings {
@@ -47,9 +48,10 @@ impl Default for ProjectSettings {
             highlight_orp: true,
             letter_spacing: 3.5,
             punctuation_delay: 50.0, // Punctuation delay: 50ms default
-            trail_words_count: 5,
+            trail_words_count: 8,
             chunk_size: 1,
             skill_level: 1,
+            normalize_text: false,
         }
     }
 }
@@ -321,7 +323,7 @@ async fn toggle_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppS
     let mut app_state = state.lock().unwrap();
 
     if app_state.is_visible {
-        window.set_always_on_top(false).unwrap();
+        // window.set_always_on_top(false).unwrap();
         app.hide().unwrap();
         app_state.is_visible = false;
         Ok(false)
@@ -329,7 +331,7 @@ async fn toggle_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppS
         app.show().unwrap();
         window.show().unwrap();
         window.set_focus().unwrap();
-        window.set_always_on_top(true).unwrap();
+        // window.set_always_on_top(true).unwrap();
         app_state.is_visible = true;
         Ok(true)
     }
@@ -341,7 +343,7 @@ async fn show_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppSta
     app.show().unwrap();
     window.show().unwrap();
     window.set_focus().unwrap();
-    window.set_always_on_top(true).unwrap();
+    // window.set_always_on_top(true).unwrap();
     let mut app_state = state.lock().unwrap();
     app_state.is_visible = true;
     Ok(())
@@ -350,7 +352,7 @@ async fn show_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppSta
 #[tauri::command]
 async fn hide_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppState>>) -> Result<(), String> {
     let window = app.get_webview_window("main").unwrap();
-    window.set_always_on_top(false).unwrap();
+    // window.set_always_on_top(false).unwrap();
     app.hide().unwrap();
     let mut app_state = state.lock().unwrap();
     app_state.is_visible = false;
@@ -374,7 +376,7 @@ pub fn run() {
                         let mut app_state = state.lock().unwrap();
 
                         if app_state.is_visible {
-                            window.set_always_on_top(false).unwrap();
+                            // window.set_always_on_top(false).unwrap();
                             app_handle.hide().unwrap();
                             app_state.is_visible = false;
                             app_handle.emit("window-toggled", serde_json::json!({ "isVisible": false })).unwrap();
@@ -390,7 +392,7 @@ pub fn run() {
                             app_handle.show().unwrap();
                             window.show().unwrap();
                             window.set_focus().unwrap();
-                            window.set_always_on_top(true).unwrap();
+                            // window.set_always_on_top(true).unwrap();
                             app_state.is_visible = true;
                             app_handle.emit("window-toggled", serde_json::json!({ "isVisible": true })).unwrap();
                         }
@@ -414,7 +416,7 @@ pub fn run() {
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            app.set_activation_policy(tauri::ActivationPolicy::Regular);
 
             let window = app.get_webview_window("main").unwrap();
             let app_handle = app.app_handle().clone();
@@ -444,7 +446,7 @@ pub fn run() {
 
             app.global_shortcut().register("Option+C").unwrap();
 
-            window.set_always_on_top(true).unwrap();
+            // window.set_always_on_top(true).unwrap();
 
             Ok(())
         })

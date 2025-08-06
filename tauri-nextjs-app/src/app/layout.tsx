@@ -27,14 +27,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased relative min-h-screen overflow-hidden`}
       >
-        {/* Global Blurred Background Layer */}
-        <div className="fixed inset-0 bg-gradient-to-br from-blue-900/10 via-purple-900/10 to-pink-900/10 backdrop-blur-3xl" />
+        {/* Global Matte Background Layer */}
+        <div className="fixed inset-0 bg-gradient-to-br from-gray-900/90 via-slate-900/90 to-gray-800/90 backdrop-blur-xl" />
 
         {/* Subtle Animated Background Elements */}
         <div className="fixed inset-0 overflow-hidden">
-          <div className="absolute -top-60 -right-60 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-pink-500/3 rounded-full blur-3xl animate-pulse delay-500" />
+          <div className="absolute -top-60 -right-60 w-96 h-96 bg-gray-600/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-slate-600/5 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-gray-500/3 rounded-full blur-3xl animate-pulse delay-500" />
         </div>
 
         <div className="relative z-10">

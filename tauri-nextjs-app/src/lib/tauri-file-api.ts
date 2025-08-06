@@ -19,6 +19,7 @@ export type ProjectSettings = {
   trail_words_count: number;
   chunk_size: number;
   skill_level: number;
+  normalize_text: boolean;
 };
 
 export type ProjectSession = {
@@ -158,9 +159,10 @@ export class TauriFileAPI {
       highlight_orp: true,
       letter_spacing: 3.5,
       punctuation_delay: 50, // Punctuation delay: 50ms default
-      trail_words_count: 5,
+      trail_words_count: 8,
       chunk_size: 1,
       skill_level: 1,
+      normalize_text: false,
     };
   }
 }

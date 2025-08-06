@@ -15,7 +15,7 @@ function AppContent() {
   };
 
     return (
-    <div className="h-screen flex bg-black mt-8">
+    <div className="h-screen flex bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800">
       <FileManager
         onProjectSelected={handleProjectSelected}
         currentProjectId={state.currentProject?.id}

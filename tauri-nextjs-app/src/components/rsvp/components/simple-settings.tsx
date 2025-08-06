@@ -140,11 +140,34 @@ export function SimpleSettings() {
               />
             </div>
 
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-xs text-gray-300 font-mono">Trail Words</Label>
+                <span className="text-xs text-gray-400 font-mono">{settings.trailWordsCount}</span>
+              </div>
+              <Slider
+                value={[settings.trailWordsCount]}
+                onValueChange={(value) => handleSliderChange('trailWordsCount', value)}
+                min={0}
+                max={15}
+                step={1}
+                className="w-full"
+              />
+            </div>
+
             <div className="flex items-center justify-between">
               <Label className="text-xs text-gray-300 font-mono">Highlight ORP</Label>
               <Switch
                 checked={settings.highlightORP}
                 onCheckedChange={(checked) => updateSetting('highlightORP', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-gray-300 font-mono">Normalize Text</Label>
+              <Switch
+                checked={settings.normalizeText}
+                onCheckedChange={(checked) => updateSetting('normalizeText', checked)}
               />
             </div>
           </CardContent>

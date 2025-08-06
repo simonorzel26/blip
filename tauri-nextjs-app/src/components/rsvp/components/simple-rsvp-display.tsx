@@ -45,7 +45,13 @@ export function SimpleRSVPDisplay() {
     }
   }, [state.maxWordLength]);
 
-  const currentWord = state.words[state.currentWordIndex] || '';
+  // Text normalization function
+  const normalizeText = (text: string): string => {
+    if (!settings.normalizeText) return text;
+    return text.toLowerCase().replace(/\s+/g, '');
+  };
+
+  const currentWord = normalizeText(state.words[state.currentWordIndex] || '');
 
   // Calculate progress
   const progress = state.currentProject
@@ -83,12 +89,12 @@ export function SimpleRSVPDisplay() {
 
   if (!state.isDisplayingWords) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#000000' }}>
-        <div className="text-center" style={{ color: '#888888' }}>
-          <p className="text-lg mb-2" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace' }}>
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900/80 via-slate-900/80 to-gray-800/80 backdrop-blur-sm border-x border-gray-700/50">
+        <div className="text-center text-gray-400">
+          <p className="text-lg mb-2 font-mono">
             No content loaded
           </p>
-          <p className="text-sm" style={{ fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace' }}>
+          <p className="text-sm font-mono opacity-70">
             Import a file or use the clipboard shortcut (Option+C)
           </p>
         </div>
@@ -97,14 +103,7 @@ export function SimpleRSVPDisplay() {
   }
 
   return (
-    <div
-      className="flex-1 flex flex-col relative"
-      style={{
-        backgroundColor: '#000000',
-        color: '#ffffff',
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
-      }}
-    >
+    <div className="flex-1 flex flex-col relative bg-gradient-to-br from-gray-900/80 via-slate-900/80 to-gray-800/80 backdrop-blur-sm border-x border-gray-700/50 text-gray-100 font-mono">
             {/* Main reading area */}
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
@@ -135,9 +134,9 @@ export function SimpleRSVPDisplay() {
                     width: `${fontSize * 0.6}px`,
                     height: `${fontSize * 1.2}px`,
                     marginLeft: index === 0 ? '0' : `${settings.letterSpacing}px`,
-                    color: isORP ? '#ff4444' : '#ffffff',
+                    color: isORP ? '#ef4444' : '#f1f5f9',
                     fontWeight: isORP ? 'bold' : 'normal',
-                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+                    textShadow: isORP ? '0 0 8px rgba(239, 68, 68, 0.3)' : '0 0 4px rgba(241, 245, 249, 0.1)'
                   }}
                 >
                   {letter}
@@ -148,15 +147,9 @@ export function SimpleRSVPDisplay() {
         </div>
       </div>
 
-      {/* Bottom right word counter - original style */}
+      {/* Bottom right word counter - matte style */}
       <div className="absolute bottom-4 right-4">
-        <div
-          className="text-right text-sm space-y-1"
-          style={{
-            color: '#888888',
-            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
-          }}
-        >
+        <div className="text-right text-sm space-y-1 text-gray-400 bg-gray-900/40 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-700/30">
           <div>
             {(progress.current + 1).toLocaleString()} / {progress.total.toLocaleString()}
           </div>
@@ -171,21 +164,16 @@ export function SimpleRSVPDisplay() {
         </div>
       </div>
 
-            {/* Trail words - positioned below main word */}
+            {/* Trail words - positioned above main word */}
       {settings.trailWordsCount > 0 && (
-        <div className="absolute inset-x-0" style={{ top: '60%' }}>
-          <div
-            className="text-center space-y-2"
-            style={{
-              color: '#555555',
-              fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
-            }}
-          >
+        <div className="absolute inset-x-0 flex justify-center" style={{ bottom: '60%' }}>
+          <div className="flex flex-col-reverse space-y-reverse space-y-2 text-gray-500 font-mono text-center">
             {Array.from({ length: settings.trailWordsCount }, (_, i) => {
-              // Show previous words in descending order (most recent first)
-              const wordIndex = state.currentWordIndex - 1 - i;
-              const word = wordIndex >= 0 ? state.words[wordIndex] : '';
-              const opacity = word ? (settings.trailWordsCount - i) / settings.trailWordsCount * 0.6 : 0;
+              // Show words starting from current word and going backwards
+              const wordIndex = state.currentWordIndex - i;
+              const rawWord = wordIndex >= 0 ? state.words[wordIndex] : '';
+              const word = normalizeText(rawWord);
+              const opacity = word ? (settings.trailWordsCount - i) / settings.trailWordsCount * 0.8 : 0;
 
               return (
                 <div

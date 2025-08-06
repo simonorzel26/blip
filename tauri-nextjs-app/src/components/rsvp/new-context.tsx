@@ -22,6 +22,7 @@ interface RSVPSettings {
   trailWordsCount: number;
   chunkSize: number;
   skillLevel: number;
+  normalizeText: boolean;
 }
 
 interface RSVPContextType {
@@ -59,9 +60,10 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     highlightORP: true,
     letterSpacing: 3.5,
     punctuationDelay: 50, // Punctuation delay: 50ms default
-    trailWordsCount: 5,
+    trailWordsCount: 8,
     chunkSize: 1,
     skillLevel: 1,
+    normalizeText: false,
   });
 
   const [wordBuffer, setWordBuffer] = useState<string[]>([]);
@@ -77,6 +79,7 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     trail_words_count: rsvpSettings.trailWordsCount,
     chunk_size: rsvpSettings.chunkSize,
     skill_level: rsvpSettings.skillLevel,
+    normalize_text: rsvpSettings.normalizeText,
   });
 
   const convertFromProjectSettings = (projectSettings: ProjectSettings): RSVPSettings => ({
@@ -88,6 +91,7 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     trailWordsCount: projectSettings.trail_words_count,
     chunkSize: projectSettings.chunk_size,
     skillLevel: projectSettings.skill_level,
+    normalizeText: projectSettings.normalize_text,
   });
 
     // Save progress function
