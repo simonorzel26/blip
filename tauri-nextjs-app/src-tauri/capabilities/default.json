@@ -13,6 +13,8 @@
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "dialog:allow-open",
+    "dialog:allow-confirm",
+    "dialog:allow-message",
     "fs:allow-read-file",
     "fs:allow-read-text-file",
     "fs:scope",

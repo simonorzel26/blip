@@ -88,6 +88,15 @@ export class TauriFileAPI {
     }
   }
 
+  static async deleteProject(projectId: string): Promise<void> {
+    try {
+      await invoke('delete_project', { projectId });
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      throw error;
+    }
+  }
+
   static async saveSessionProgress(projectId: string, wordIndex: number): Promise<void> {
     try {
       await invoke('save_session_progress', {

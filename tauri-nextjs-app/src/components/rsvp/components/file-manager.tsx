@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Plus, Play, Trash2 } from 'lucide-react';
+import { FileText, Plus, Play, X } from 'lucide-react';
 import { TauriFileAPI, FileMetadata } from '@/lib/tauri-file-api';
+import { confirm } from '@tauri-apps/plugin-dialog';
 
 interface FileManagerProps {
   onProjectSelected: (project: FileMetadata, wordIndex: number) => void;
@@ -70,6 +71,32 @@ export function FileManager({ onProjectSelected, currentProjectId }: FileManager
     }
   };
 
+    const handleDeleteProject = async (project: FileMetadata, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card click
+
+    const confirmed = await confirm(`Delete "${project.filename}"? This will permanently remove the project and its file.`, {
+      title: 'Delete Project',
+      kind: 'warning'
+    });
+
+    if (confirmed) {
+      try {
+        await TauriFileAPI.deleteProject(project.id);
+        setProjects(prev => prev.filter(p => p.id !== project.id));
+
+        // If this was the current project, clear selection
+        if (currentProjectId === project.id) {
+          // We could notify parent to clear current project, but for now just let it handle naturally
+        }
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        // Use Tauri's message dialog instead of alert
+        const { message } = await import('@tauri-apps/plugin-dialog');
+        await message('Failed to delete project. Please try again.', { title: 'Error', kind: 'error' });
+      }
+    }
+  };
+
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString();
@@ -111,7 +138,7 @@ export function FileManager({ onProjectSelected, currentProjectId }: FileManager
           projects.map((project) => (
             <Card
               key={project.id}
-              className={`cursor-pointer transition-colors bg-gray-800 border-gray-700 hover:bg-gray-700 ${
+              className={`group cursor-pointer transition-colors bg-gray-800 border-gray-700 hover:bg-gray-700 ${
                 currentProjectId === project.id ? 'ring-2 ring-blue-400' : ''
               }`}
               onClick={() => handleSelectProject(project)}
@@ -119,7 +146,16 @@ export function FileManager({ onProjectSelected, currentProjectId }: FileManager
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center justify-between text-white font-mono">
                   <span className="truncate">{project.filename}</span>
-                  <Play className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <button
+                      onClick={(e) => handleDeleteProject(project, e)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded"
+                      title="Delete project"
+                    >
+                      <X className="w-3 h-3 text-red-400 hover:text-white" />
+                    </button>
+                    <Play className="w-4 h-4 text-blue-400" />
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">

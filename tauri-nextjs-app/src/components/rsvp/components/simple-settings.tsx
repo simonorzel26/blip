@@ -1,15 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { useRSVP } from '../new-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Play, Pause, RotateCcw, Clipboard } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Play, Pause, RotateCcw, Clipboard, ArrowRight } from 'lucide-react';
 
 export function SimpleSettings() {
-  const { state, settings, updateSetting, playPause, resetToStart, loadClipboard } = useRSVP();
+  const { state, settings, updateSetting, playPause, resetToStart, loadClipboard, jumpToWord } = useRSVP();
+  const [jumpInput, setJumpInput] = useState('');
 
   const handleSliderChange = (key: keyof typeof settings, value: number[]) => {
     updateSetting(key, value[0]);
@@ -19,6 +22,30 @@ export function SimpleSettings() {
   const wordDelayMs = Math.round(settings.timePerWord);
   const charDelayMs = Math.round(settings.timePerCharacter);
   const punctDelayMs = Math.round(settings.punctuationDelay);
+
+  const handleJumpToWord = async () => {
+    const wordIndex = parseInt(jumpInput) - 1; // Convert from 1-based to 0-based
+    if (!isNaN(wordIndex) && wordIndex >= 0 && state.currentProject && wordIndex < state.currentProject.total_words) {
+      try {
+        await jumpToWord(wordIndex);
+        setJumpInput(''); // Clear input after successful jump
+      } catch (error) {
+        console.error('Failed to jump to word:', error);
+      }
+    } else {
+      const { message } = await import('@tauri-apps/plugin-dialog');
+      await message(`Please enter a valid word number between 1 and ${state.currentProject?.total_words?.toLocaleString() || 'N/A'}`, {
+        title: 'Invalid Word Number',
+        kind: 'warning'
+      });
+    }
+  };
+
+  const handleJumpInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleJumpToWord();
+    }
+  };
 
   return (
     <div className="w-80 h-full bg-gray-900 border-l border-gray-700 flex flex-col overflow-y-auto text-white">
@@ -71,6 +98,34 @@ export function SimpleSettings() {
               <Clipboard className="w-3 h-3 mr-2" />
               Read Clipboard
             </Button>
+
+            {state.currentProject && (
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-300 font-mono">Jump to Word</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    type="number"
+                    placeholder="Word #"
+                    value={jumpInput}
+                    onChange={(e) => setJumpInput(e.target.value)}
+                    onKeyPress={handleJumpInputKeyPress}
+                    className="flex-1 bg-gray-700 border-gray-600 text-white text-xs"
+                    min="1"
+                    max={state.currentProject.total_words}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleJumpToWord}
+                    disabled={!jumpInput.trim()}
+                  >
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </div>
+                <div className="text-xs text-gray-400 font-mono">
+                  Current: {(state.globalWordIndex + 1).toLocaleString()} / {state.currentProject.total_words.toLocaleString()}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -295,18 +295,44 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     const clampedIndex = Math.max(0, Math.min(wordIndex, state.currentProject.total_words - 1));
 
     // Check if we need to load a different buffer
+    let newBufferStartIndex = bufferStartIndex;
     if (clampedIndex < bufferStartIndex || clampedIndex >= bufferStartIndex + wordBuffer.length) {
-      await loadWordBuffer(state.currentProject, clampedIndex);
+      const newBuffer = await TauriFileAPI.loadWordBuffer(state.currentProject.saved_path, clampedIndex, BUFFER_SIZE);
+      const startIndex = Math.max(0, clampedIndex - Math.floor(BUFFER_SIZE / 2));
+
+      setWordBuffer(newBuffer);
+      setBufferStartIndex(startIndex);
+      newBufferStartIndex = startIndex;
+
+      // Calculate max word length for the new buffer
+      const maxLen = Math.max(...newBuffer.map(word => word.length));
+      setState(prev => ({
+        ...prev,
+        words: newBuffer,
+        maxWordLength: maxLen,
+      }));
     }
 
-    const newRelativeIndex = clampedIndex - bufferStartIndex;
+    const newRelativeIndex = clampedIndex - newBufferStartIndex;
 
     setState(prev => ({
       ...prev,
       globalWordIndex: clampedIndex,
       currentWordIndex: newRelativeIndex,
     }));
-  }, [state.currentProject, bufferStartIndex, wordBuffer.length, loadWordBuffer]);
+
+    // Save the new position
+    try {
+      await TauriFileAPI.updateProjectProgress(state.currentProject, clampedIndex);
+
+      // Dispatch progress update event
+      window.dispatchEvent(new CustomEvent('project-progress-updated', {
+        detail: { projectId: state.currentProject.id, currentWordIndex: clampedIndex }
+      }));
+    } catch (error) {
+      console.error('Failed to save progress after jump:', error);
+    }
+  }, [state.currentProject, bufferStartIndex, wordBuffer.length]);
 
   const loadClipboard = useCallback(async () => {
     try {

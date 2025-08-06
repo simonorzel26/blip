@@ -209,6 +209,51 @@ async fn load_projects(app: tauri::AppHandle) -> Result<Vec<FileMetadata>, Strin
 }
 
 #[tauri::command]
+async fn delete_project(app: tauri::AppHandle, project_id: String) -> Result<(), String> {
+    let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let mut projects_file = PathBuf::from(app_dir.clone());
+    projects_file.push("projects.json");
+    let mut sessions_file = PathBuf::from(app_dir);
+    sessions_file.push("sessions.json");
+
+    // Load existing projects
+    let mut projects: Vec<FileMetadata> = if projects_file.exists() {
+        let content = fs::read_to_string(&projects_file).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+
+    // Find and remove the project
+    let project_to_delete = projects.iter().find(|p| p.id == project_id).cloned();
+    projects.retain(|p| p.id != project_id);
+
+    // Save updated projects list
+    let json = serde_json::to_string_pretty(&projects).map_err(|e| e.to_string())?;
+    fs::write(&projects_file, json).map_err(|e| e.to_string())?;
+
+    // Remove associated sessions
+    if sessions_file.exists() {
+        let content = fs::read_to_string(&sessions_file).map_err(|e| e.to_string())?;
+        let mut sessions: Vec<ProjectSession> = serde_json::from_str(&content).unwrap_or_default();
+        sessions.retain(|s| s.project_id != project_id);
+
+        let json = serde_json::to_string_pretty(&sessions).map_err(|e| e.to_string())?;
+        fs::write(&sessions_file, json).map_err(|e| e.to_string())?;
+    }
+
+    // Delete the physical file if it exists
+    if let Some(project) = project_to_delete {
+        let file_path = PathBuf::from(&project.saved_path);
+        if file_path.exists() {
+            fs::remove_file(file_path).map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn save_session_progress(app: tauri::AppHandle, project_id: String, word_index: usize) -> Result<(), String> {
     let app_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let mut sessions_file = PathBuf::from(app_dir);
@@ -406,6 +451,7 @@ pub fn run() {
             load_word_buffer,
             save_project_metadata,
             load_projects,
+            delete_project,
             save_session_progress,
             load_session_progress,
             save_project_settings,
