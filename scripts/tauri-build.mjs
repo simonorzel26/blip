@@ -13,13 +13,7 @@ const targetDir = path.join(srcTauri, 'target');
 // Ensure target directory exists
 fs.mkdirSync(targetDir, { recursive: true });
 
-// Compute tauri binary path in node_modules to avoid PATH/env quirks
-const tauriBin = path.join(
-  projectRoot,
-  'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'tauri.cmd' : 'tauri'
-);
+// We'll invoke Tauri via `npm exec` for cross-platform reliability (esp. Windows)
 
 // Build args
 const userArgs = process.argv.slice(2);
@@ -45,12 +39,14 @@ console.log(`Using CARGO_TARGET_DIR: ${env.CARGO_TARGET_DIR}`);
 console.log(`Using TAURI_DIR: ${env.TAURI_DIR}`);
 console.log(`Spawning: ${tauriBin} ${args.join(' ')}`);
 
-const child = spawn(tauriBin, args, {
-  cwd: projectRoot,
-  stdio: 'inherit',
-  env,
-  shell: false,
-});
+const execCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const execArgs = ['exec', '--', 'tauri', ...args];
+const spawnOpts = { cwd: projectRoot, stdio: 'inherit', env };
+if (process.platform === 'win32') {
+  spawnOpts.shell = true;
+}
+
+const child = spawn(execCmd, execArgs, spawnOpts);
 
 child.on('exit', (code) => {
   process.exit(code ?? 1);

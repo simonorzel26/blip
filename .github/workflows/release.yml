@@ -41,6 +41,9 @@ jobs:
         run: npm ci
       - name: Build Tauri (EXE)
         run: npm run tauri:build
+        env:
+          CI: true
+          RUSTFLAGS: -Ctarget-feature=+crt-static
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
