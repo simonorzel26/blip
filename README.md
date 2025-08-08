@@ -6,6 +6,20 @@ Blip is a desktop RSVP (Rapid Serial Visual Presentation) reader built for perso
 
 ![Blip RSVP Reader Screenshot](./Screenshot%202025-08-08%20at%2023.26.10.png)
 
+### Install
+
+- **Download**: Get the latest installers from the Tagged builds page: [blip tags](https://github.com/simonorzel26/blip/tags).
+- **macOS (DMG)**:
+  - Download the `.dmg` from the latest tag and drag `Blip RSVP Reader.app` to Applications.
+  - If Gatekeeper says the app is damaged, remove quarantine and open:
+    ```bash
+    xattr -dr com.apple.quarantine "/Applications/Blip RSVP Reader.app"
+    open "/Applications/Blip RSVP Reader.app"
+    ```
+- **Windows (EXE)**:
+  - Download the `.exe` from the latest tag and run the installer.
+  - If SmartScreen warns, choose More info → Run anyway.
+
 ### Features
 
 - Emphasized Optimal Recognition Point (ORP) highlighting
