@@ -42,6 +42,16 @@ Outputs by platform:
 - macOS: `.app` and `.dmg` under `src-tauri/target/release/bundle/macos` and `bundle/dmg`
 - Windows: `.msi` by default (WiX). Optional `.exe` installer via NSIS if NSIS is installed
 
+### Install on macOS
+
+Unsigned builds are quarantined by Gatekeeper. After moving the app to Applications, remove quarantine once:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Blip RSVP Reader.app"
+```
+
+Then open it normally from Applications. Signed/notarized builds from Releases won’t require this step.
+
 #### Prerequisites
 
 - Rust (via `rustup`)
