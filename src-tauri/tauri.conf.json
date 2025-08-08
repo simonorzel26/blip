@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Blip RSVP Reader",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.blip.rsvp-reader",
   "build": {
     "frontendDist": "../out",
