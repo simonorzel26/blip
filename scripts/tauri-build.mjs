@@ -37,7 +37,7 @@ const env = {
 
 console.log(`Using CARGO_TARGET_DIR: ${env.CARGO_TARGET_DIR}`);
 console.log(`Using TAURI_DIR: ${env.TAURI_DIR}`);
-console.log(`Spawning: ${tauriBin} ${args.join(' ')}`);
+console.log(`Spawning: npm exec -- tauri ${args.join(' ')}`);
 
 const execCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const execArgs = ['exec', '--', 'tauri', ...args];
