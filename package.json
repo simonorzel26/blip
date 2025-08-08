@@ -7,7 +7,11 @@
     "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "node ./scripts/tauri-build.mjs",
+    "tauri:build:nsis": "node ./scripts/tauri-build.mjs --bundles nsis",
+    "tauri:build:msi": "node ./scripts/tauri-build.mjs --bundles msi"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

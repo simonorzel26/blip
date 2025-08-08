@@ -1,39 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Blip RSVP Reader
 
-## Getting Started
+Read a book in 2 hours.
 
-First, run the development server:
+Blip is a desktop RSVP (Rapid Serial Visual Presentation) reader built for personal use to dramatically speed up reading while keeping focus high. It streams one word at a time with tuned timing, trail words, and ORP highlighting so you can skim less and comprehend more.
+
+![Blip RSVP Reader Screenshot](./Screenshot%202025-08-08%20at%2023.26.10.png)
+
+### Features
+
+- Emphasized Optimal Recognition Point (ORP) highlighting
+- Adjustable delays: word, character, and punctuation
+- Trail words and letter spacing controls
+- Local file library with large-file streaming
+- Global shortcuts for hands-off reading
+
+### Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App runs at `http://localhost:3000` in the browser. For the desktop app shell, use Tauri dev:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run tauri:dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Build Desktop Bundles
 
+This repo uses Tauri v2. Building will first produce the static Next.js output into `out/`, then Tauri bundles per platform into `src-tauri/target/release/bundle`.
 
-adfsdfsdf
+Common command on any platform:
 
-## Learn More
+```bash
+npm run tauri:build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Outputs by platform:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- macOS: `.app` and `.dmg` under `src-tauri/target/release/bundle/macos` and `bundle/dmg`
+- Windows: `.msi` by default (WiX). Optional `.exe` installer via NSIS if NSIS is installed
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+#### Prerequisites
 
-## Deploy on Vercel
+- Rust (via `rustup`)
+- Node.js 18+
+- macOS: Xcode Command Line Tools (`xcode-select --install`)
+- Windows: Visual Studio Build Tools (Desktop C++ + Windows SDK) and either WiX v3 (for `.msi`) or NSIS (for `.exe`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### What This App Is (and is not)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This is a personal tool to help me read books faster using RSVP. It favors simplicity and local-first files. There’s no cloud sync or login.
+
+### License
+
+Personal use. Ask before redistribution.
