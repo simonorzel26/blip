@@ -369,11 +369,10 @@ async fn toggle_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppS
 
     if app_state.is_visible {
         // window.set_always_on_top(false).unwrap();
-        app.hide().unwrap();
+        window.hide().unwrap();
         app_state.is_visible = false;
         Ok(false)
     } else {
-        app.show().unwrap();
         window.show().unwrap();
         window.set_focus().unwrap();
         // window.set_always_on_top(true).unwrap();
@@ -385,7 +384,6 @@ async fn toggle_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppS
 #[tauri::command]
 async fn show_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppState>>) -> Result<(), String> {
     let window = app.get_webview_window("main").unwrap();
-    app.show().unwrap();
     window.show().unwrap();
     window.set_focus().unwrap();
     // window.set_always_on_top(true).unwrap();
@@ -398,7 +396,7 @@ async fn show_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppSta
 async fn hide_window(app: tauri::AppHandle, state: tauri::State<'_, Mutex<AppState>>) -> Result<(), String> {
     let window = app.get_webview_window("main").unwrap();
     // window.set_always_on_top(false).unwrap();
-    app.hide().unwrap();
+    window.hide().unwrap();
     let mut app_state = state.lock().unwrap();
     app_state.is_visible = false;
     Ok(())
@@ -422,7 +420,7 @@ pub fn run() {
 
                         if app_state.is_visible {
                             // window.set_always_on_top(false).unwrap();
-                            app_handle.hide().unwrap();
+                            window.hide().unwrap();
                             app_state.is_visible = false;
                             app_handle.emit("window-toggled", serde_json::json!({ "isVisible": false })).unwrap();
                         } else {
@@ -434,7 +432,6 @@ pub fn run() {
                             std::thread::sleep(std::time::Duration::from_millis(200));
 
                             // Then show the app
-                            app_handle.show().unwrap();
                             window.show().unwrap();
                             window.set_focus().unwrap();
                             // window.set_always_on_top(true).unwrap();
