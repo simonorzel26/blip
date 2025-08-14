@@ -20,6 +20,12 @@ Blip is a desktop RSVP (Rapid Serial Visual Presentation) reader built for perso
   - Download the `.exe` from the latest tag and run the installer.
   - If SmartScreen warns, choose More info → Run anyway.
 
+### Updating (Beta)
+
+**macOS**: Simply delete the old app from Applications and install the new version. Your app data (settings, file library, etc.) will be preserved as it's stored separately in `~/Library/Application Support/com.blip.rsvp-reader/`.
+
+**Windows**: Uninstall the old version and install the new one. Your data is stored in `%APPDATA%\com.blip.rsvp-reader\` and will be preserved.
+
 ### Features
 
 - Emphasized Optimal Recognition Point (ORP) highlighting
