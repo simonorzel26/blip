@@ -8,10 +8,10 @@ import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Play, Pause, RotateCcw, Clipboard, ArrowRight } from 'lucide-react';
+import { Play, Pause, RotateCcw, Clipboard, ArrowRight, BookOpen } from 'lucide-react';
 
 export function SimpleSettings() {
-  const { state, settings, updateSetting, playPause, resetToStart, loadClipboard, jumpToWord } = useRSVP();
+  const { state, settings, updateSetting, playPause, resetToStart, loadClipboard, jumpToWord, openDictionaryModal } = useRSVP();
   const [jumpInput, setJumpInput] = useState('');
 
   const handleSliderChange = (key: keyof typeof settings, value: number[]) => {
@@ -98,6 +98,24 @@ export function SimpleSettings() {
               <Clipboard className="w-3 h-3 mr-2" />
               Read Clipboard
             </Button>
+
+            {state.currentProject && state.isDisplayingWords && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const currentWord = state.words[state.currentWordIndex];
+                  if (currentWord) {
+                    openDictionaryModal(currentWord);
+                  }
+                }}
+                className="w-full"
+                disabled={!state.words[state.currentWordIndex]}
+              >
+                <BookOpen className="w-3 h-3 mr-2" />
+                Look Up Current Word
+              </Button>
+            )}
 
             {state.currentProject && (
               <div className="space-y-2">
@@ -250,6 +268,10 @@ export function SimpleSettings() {
               <div className="flex justify-between">
                 <span>Reset</span>
                 <span className="font-mono text-gray-400">⌘R</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Look Up Word</span>
+                <span className="font-mono text-gray-400">⌘D</span>
               </div>
               <div className="flex justify-between">
                 <span>Toggle App</span>

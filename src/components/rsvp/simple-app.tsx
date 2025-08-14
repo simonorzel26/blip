@@ -5,10 +5,11 @@ import { RSVPProvider, useRSVP } from './new-context';
 import { FileManager } from './components/file-manager';
 import { SimpleRSVPDisplay } from './components/simple-rsvp-display';
 import { SimpleSettings } from './components/simple-settings';
+import { DictionaryModal } from './components/dictionary-modal';
 import { FileMetadata } from '@/lib/tauri-file-api';
 
 function AppContent() {
-  const { loadProject, state } = useRSVP();
+  const { loadProject, state, closeDictionaryModal } = useRSVP();
 
   const handleProjectSelected = async (project: FileMetadata, wordIndex: number) => {
     await loadProject(project, wordIndex);
@@ -22,6 +23,12 @@ function AppContent() {
       />
       <SimpleRSVPDisplay />
       <SimpleSettings />
+
+      <DictionaryModal
+        isOpen={state.dictionaryModalOpen}
+        onClose={closeDictionaryModal}
+        word={state.selectedWord}
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRSVP } from '../new-context';
 
 export function SimpleRSVPDisplay() {
-  const { state, settings, playPause, resetToStart, nextWord, previousWord } = useRSVP();
+  const { state, settings, playPause, resetToStart, nextWord, previousWord, openDictionaryModal } = useRSVP();
   const [fontSize, setFontSize] = useState(48);
 
   // Keyboard controls
@@ -29,12 +29,21 @@ export function SimpleRSVPDisplay() {
             resetToStart();
           }
           break;
+        case 'KeyD':
+          if (e.metaKey || e.ctrlKey) {
+            e.preventDefault();
+            const currentWord = state.words[state.currentWordIndex];
+            if (currentWord) {
+              openDictionaryModal(currentWord);
+            }
+          }
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [playPause, previousWord, nextWord, resetToStart]);
+  }, [playPause, previousWord, nextWord, resetToStart, openDictionaryModal, state.words, state.currentWordIndex]);
 
   // Calculate dynamic font size based on word length and max word length
   useEffect(() => {
@@ -87,6 +96,10 @@ export function SimpleRSVPDisplay() {
     };
   }, [currentWord, orpIndex]);
 
+  const handleWordClick = (word: string) => {
+    openDictionaryModal(word);
+  };
+
   if (!state.isDisplayingWords) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900/80 via-slate-900/80 to-gray-800/80 backdrop-blur-sm border-x border-gray-700/50">
@@ -129,7 +142,7 @@ export function SimpleRSVPDisplay() {
               return (
                 <div
                   key={index}
-                  className="font-bold leading-none select-none flex items-center justify-center"
+                  className="font-bold leading-none select-none flex items-center justify-center cursor-pointer hover:bg-gray-800/30 rounded transition-colors"
                   style={{
                     width: `${fontSize * 0.6}px`,
                     height: `${fontSize * 1.2}px`,
@@ -138,6 +151,8 @@ export function SimpleRSVPDisplay() {
                     fontWeight: isORP ? 'bold' : 'normal',
                     textShadow: isORP ? '0 0 8px rgba(239, 68, 68, 0.3)' : '0 0 4px rgba(241, 245, 249, 0.1)'
                   }}
+                  onClick={() => handleWordClick(state.words[state.currentWordIndex] || '')}
+                  title="Click to look up definition (Cmd/Ctrl+D)"
                 >
                   {letter}
                 </div>

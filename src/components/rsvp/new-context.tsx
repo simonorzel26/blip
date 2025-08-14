@@ -11,6 +11,8 @@ interface RSVPState {
   isPlaying: boolean;
   currentProject: FileMetadata | null;
   globalWordIndex: number;
+  dictionaryModalOpen: boolean;
+  selectedWord: string;
 }
 
 interface RSVPSettings {
@@ -36,6 +38,8 @@ interface RSVPContextType {
   previousWord: () => void;
   jumpToWord: (wordIndex: number) => void;
   loadClipboard: () => Promise<void>;
+  openDictionaryModal: (word: string) => void;
+  closeDictionaryModal: () => void;
 }
 
 const RSVPContext = createContext<RSVPContextType | undefined>(undefined);
@@ -52,6 +56,8 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     isPlaying: false,
     currentProject: null,
     globalWordIndex: 0,
+    dictionaryModalOpen: false,
+    selectedWord: '',
   });
 
   const [settings, setSettings] = useState<RSVPSettings>({
@@ -361,6 +367,22 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const openDictionaryModal = useCallback((word: string) => {
+    setState(prev => ({
+      ...prev,
+      dictionaryModalOpen: true,
+      selectedWord: word,
+    }));
+  }, []);
+
+  const closeDictionaryModal = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      dictionaryModalOpen: false,
+      selectedWord: '',
+    }));
+  }, []);
+
   // Auto-advance words when playing
   useEffect(() => {
     if (!state.isPlaying || !state.isDisplayingWords) return;
@@ -390,6 +412,8 @@ export function RSVPProvider({ children }: { children: ReactNode }) {
     previousWord,
     jumpToWord,
     loadClipboard,
+    openDictionaryModal,
+    closeDictionaryModal,
   };
 
   return (
