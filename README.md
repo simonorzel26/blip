@@ -1,4 +1,4 @@
-## Blip RSVP Reader
+## Blip (beta) RSVP Reader
 
 Read a book in 2 hours.
 
