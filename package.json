@@ -1,6 +1,6 @@
 {
   "name": "tauri-nextjs-app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,11 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "node ./scripts/tauri-build.mjs",
     "tauri:build:nsis": "node ./scripts/tauri-build.mjs --bundles nsis",
-    "tauri:build:msi": "node ./scripts/tauri-build.mjs --bundles msi"
+    "tauri:build:msi": "node ./scripts/tauri-build.mjs --bundles msi",
+    "release": "node ./scripts/release.mjs",
+    "release:patch": "npm run release patch",
+    "release:minor": "npm run release minor",
+    "release:major": "npm run release major"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
